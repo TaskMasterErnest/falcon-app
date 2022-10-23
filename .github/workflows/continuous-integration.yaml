@@ -32,8 +32,7 @@ jobs:
       id: scan
       with:
         image: "ernestklu/falcon-look-app:latest"
-        fail-build: true
-        severity-cutoff: medium
+        fail-build: false
 
     - name: upload Anchore scan SARIF report
       uses: github/codeql-action/upload-sarif@v2

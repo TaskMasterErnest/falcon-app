@@ -17,7 +17,7 @@ def test_list_images(client):
     doc = {
         'images': [
             {
-                'href': '/images/1eaf6ef1-7f2d-4ecc-a8d5-6e8adba7cc0e.png'
+                'href': '/image/1eaf6ef1-7f2d-4ecc-a8d5-6e8adba7cc0e.png'
             }
         ]
     }
