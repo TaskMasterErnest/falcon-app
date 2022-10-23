@@ -1,0 +1,69 @@
+name: Falcon CI
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+
+    - run: pip install -r requirements.txt
+
+    - name: Docker Build and run
+      run: |
+        docker build . -t ernestklu/falcon-look-app
+        docker run -dit -p 8000:8000 ernestklu/falcon-look-app
+
+    - name: Test Code
+      run: coverage run -m pytest tests/
+
+    - name: Generate the report
+      if: ${{ always() }}
+      run: coverage report > coverage-report
+
+    - name: Scan image
+      uses: anchore/scan-action@v3
+      id: scan
+      with:
+        image: "ernestklu/falcon-look-app"
+
+    - name: upload Anchore scan SARIF report
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: vuln-report
+        path: results.sarif
+
+    - uses: actions/upload-artifact@v3
+      if: ${{ always() }}
+      with:
+        name: coverage-report
+        path: coverage-report
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: ernestklu/falcon-look-app:latest
+
+    - name: Create issue on failure
+      if: ${{ failure() }}
+      run: |
+        gh issue create --title "Failure on workflow: ${{ github.workflow }} - ${{ github.sha }}" --body "Failure on Job: ${{ github.job }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
